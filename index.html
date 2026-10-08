@@ -46,6 +46,15 @@ h1 em{font-style:normal;color:#ff6d7c}h1 .brand{color:#ff6d7c;font-size:1.1em}h1
 @media(max-width:620px){.w{padding:24px 14px 60px}.modebox{width:100%;gap:7px}.modebox>.btn{flex:1;padding:11px 8px;font-size:12px}.searchbar .btn{font-size:13px;padding:12px}.searchbar input{padding:12px 6px}.grid{grid-template-columns:1fr}.sub{margin-bottom:24px}h1{font-size:30px}.actions{gap:4px}.actions .btn{font-size:12px;padding:9px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 .btn.loading{opacity:.7;cursor:wait;pointer-events:none}
+
+/* The artist field is owned by the user; never hydrate its value from saved match state. */
+.searchbar{position:relative}
+.searchbar input[type=search]{min-width:0;width:100%;-webkit-appearance:none;appearance:none}
+.searchbar input::-webkit-search-cancel-button{display:none}
+.clear-artist{flex:none;border:0;background:transparent;color:#9ca3af;cursor:pointer;font-size:25px;line-height:1;padding:5px 9px;border-radius:9px;transition:color .18s,transform .18s,background .18s}
+.clear-artist:hover{color:#fff;background:#ffffff12;transform:scale(1.08)}
+.clear-artist:active{transform:scale(.92)}
+.clear-artist[hidden]{display:none}
 </style></head><body><div class="w">
 <h1><span class="brand">♫</span> MUSIC <em>BATTLE</em><span class="tag">64</span></h1>
 <div class="sub">选出你心中的最佳歌曲</div>
@@ -62,7 +71,7 @@ h1 em{font-style:normal;color:#ff6d7c}h1 .brand{color:#ff6d7c;font-size:1.1em}h1
   </span>
 </div>
 
-<div class="tools searchbar"><input id="artist" placeholder="输入歌手名称，如 周杰伦" autocomplete="off"><button id="search" class="btn red">搜索并开始 <span aria-hidden="true">↗</span></button></div><div class="actions"><button id="restart" class="btn">↻ 重新开始</button><button id="clear" class="btn">清除存档</button><button id="toggleManual" class="btn">导入歌单 <span id="chevron">⌄</span></button></div>
+<div class="tools searchbar"><input id="artist" type="search" placeholder="输入歌手名称，如 周杰伦" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button id="clearArtist" class="clear-artist" type="button" aria-label="清空歌手名称" title="清空">×</button><button id="search" class="btn red">搜索并开始 <span aria-hidden="true">↗</span></button></div><div class="actions"><button id="restart" class="btn">↻ 重新开始</button><button id="clear" class="btn">清除存档</button><button id="toggleManual" class="btn">导入歌单 <span id="chevron">⌄</span></button></div>
 <div id="manualPanel" class="manualpanel" hidden><textarea id="manual" rows="4" placeholder="每行一首，共64首。例如：晴天 - 周杰伦"></textarea><button id="import" class="btn red">使用歌单开始</button></div><p id="status" class="muted" role="status" aria-live="polite"></p>
 <div id="now" class="now"><button id="stop" class="btn">■ 停止</button><span id="nowtext"></span></div>
 <div id="subtabs"></div><div id="view"></div><audio id="audio"></audio>
@@ -134,7 +143,14 @@ $('#search').onclick=async()=>{
     }
   }catch(e){msg('搜索失败：'+e.message,true)}finally{btn.disabled=false;btn.classList.remove('loading')}
 };
-$('#artist').onkeydown=e=>e.key==='Enter'&&$('#search').click();
+// Search text is never derived from saved artist or rerendered tournament state.
+const artistField=$('#artist'),clearArtist=$('#clearArtist');
+function updateClearArtist(){clearArtist.hidden=!artistField.value.length}
+artistField.addEventListener('input',updateClearArtist);
+artistField.addEventListener('change',updateClearArtist);
+clearArtist.addEventListener('click',()=>{artistField.value='';artistField.dispatchEvent(new Event('input',{bubbles:true}));artistField.focus()});
+artistField.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#search').click()}});
+updateClearArtist();
 $('#import').onclick=()=>{
  const lines=$('#manual').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
  if(lines.length!==64)return msg('请粘贴恰好64首歌（每行一首），当前 '+lines.length+' 首。',true);

@@ -1,16 +1,5 @@
-# MUSIC BATTLE · 64
+MUSIC BATTLE · 搜索框修复版
 
-简约版 64 首歌曲淘汰赛：经典 64 强、瑞士轮 5/6/7 轮、Top 8、自动存档、手机适配。
+修复：歌手输入框支持逐字退格、全选删除和 × 一键清空。
 
-## 更新现有 Vercel 网站
-
-1. 解压 ZIP，将 **index.html**、**vercel.json**、**api 文件夹（其中包含 search.js）** 上传到 GitHub 仓库根目录，替换旧文件。
-2. GitHub 提交后，Vercel 会自动触发新部署。无需再创建新项目。
-3. 在你的 Vercel 域名打开 `https://你的域名.vercel.app/api/search?artist=周杰伦`：如果返回 `{"songs":[...]}`，表示搜索接口已运行；如果是网页/404，说明 `api/search.js` 未正确部署；如果是 502 JSON，说明网易云上游不可用。
-4. 打开网站，输入歌手开始。若网易云无法返回足够歌曲，可展开「导入歌单」粘贴恰好 64 首歌曲。
-
-## 注意
-
-搜索是非官方网易云元数据接口，不使用任何人的账号或 Cookie，也不保证网易云上游一直可用。已增加多接口尝试和清晰的错误提示，但**无法保证在 Vercel 上搜索成功**。网页音频受版权和浏览器限制，可跳转网易云官方页面收听。
-
-建议直接分享 Vercel 域名，GitHub Pages 不运行 `api/search.js` 后端。
+上传时请把 index.html、vercel.json、api 文件夹放在 GitHub 仓库根目录，提交后等待 Vercel 自动部署。
