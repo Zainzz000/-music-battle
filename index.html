@@ -101,9 +101,39 @@ async function bridge(action,payload={}){
 function msg(x,bad=false){$('#status').textContent=x;$('#status').className='muted '+(bad?'err':'')}
 $('#toggleManual').onclick=()=>{const p=$('#manualPanel');p.hidden=!p.hidden;$('#chevron').textContent=p.hidden?'⌄':'⌃'};
 function norm(s){return String(s||'').toLowerCase().replace(/\s+/g,'')}
-function stop(){clearTimeout(timer);audio.pause();audio.removeAttribute('src');audio.load();$('#now').classList.remove('show')}
-function chorusStart(o,d){let nums=[];(function walk(x,k=''){if(x==null)return;if(typeof x==='number'&&/start/i.test(k))nums.push(x);else if(typeof x==='object')Object.entries(x).forEach(([a,b])=>walk(b,a))})(o);let v=nums.find(x=>x>=0);return v==null?(d||240000)/1000*.62:v>10000?v/1000:v}
-async function play(t,hot){stop();try{let p=await bridge('playurl',{id:t.id});if(!p.url)throw Error('没有播放地址');audio.src=p.url;await audio.play();if(hot){timer=setTimeout(stop,30000)}$('#nowtext').textContent=(hot?'🔥 ':'▶ ')+t.title+' · '+(p.level||'可用音质');$('#now').classList.add('show')}catch(e){msg('播放失败：'+e.message,true)}}$('#stop').onclick=stop;
+let playToken=0;
+function stop(){playToken++;clearTimeout(timer);timer=null;audio.pause();audio.removeAttribute('src');audio.load();$('#now').classList.remove('show')}
+// 没有网易云官方高潮时间戳时，用歌曲时长约 62% 的位置作为近似试听起点。
+function hotStart(duration){return Math.max(0,Math.min(duration-5,duration*.62))}
+function waitForMetadata(el,token){return new Promise((resolve,reject)=>{
+  if(el.readyState>=1 && Number.isFinite(el.duration) && el.duration>0)return resolve();
+  const cleanup=()=>{el.removeEventListener('loadedmetadata',ok);el.removeEventListener('durationchange',ok);el.removeEventListener('error',fail);clearTimeout(timeout)};
+  const ok=()=>{if(token!==playToken){cleanup();reject(Error('已切换歌曲'));return}if(Number.isFinite(el.duration)&&el.duration>0){cleanup();resolve()}};
+  const fail=()=>{cleanup();reject(Error('音源无法加载'))};
+  el.addEventListener('loadedmetadata',ok);el.addEventListener('durationchange',ok);el.addEventListener('error',fail);
+  const timeout=setTimeout(()=>{cleanup();reject(Error('无法获取音频时长，不能定位高潮'))},12000);
+})}
+async function play(t,hot){
+  stop();const token=playToken;
+  try{
+    const p=await bridge('playurl',{id:t.id});if(token!==playToken)return;
+    if(!p.url)throw Error('没有播放地址');
+    audio.src=p.url;audio.load();
+    if(hot){
+      await waitForMetadata(audio,token);if(token!==playToken)return;
+      const target=hotStart(audio.duration);
+      try{audio.currentTime=target}catch{throw Error('此音源不支持跳转播放位置')}
+      // 部分浏览器会异步 seek，等定位完成再播放，避免从头开始。
+      if(audio.seeking)await new Promise(resolve=>{const done=()=>{audio.removeEventListener('seeked',done);clearTimeout(timeout);resolve()};audio.addEventListener('seeked',done,{once:true});const timeout=setTimeout(done,3500)});
+      if(token!==playToken)return;
+      if(Math.abs(audio.currentTime-target)>5)throw Error('此音源不支持高潮定位，请使用 ▶ 从头试听');
+    }
+    await audio.play();if(token!==playToken){audio.pause();return}
+    if(hot)timer=setTimeout(()=>{if(token===playToken)stop()},30000);
+    $('#nowtext').textContent=(hot?'🔥 高潮片段（估算） · ':'▶ ')+t.title+' · '+(p.level||'可用音质');$('#now').classList.add('show');
+  }catch(e){if(token===playToken)msg('播放失败：'+e.message,true)}
+}
+$('#stop').onclick=stop;
 
 function saveClassic(){localStorage.setItem(SAVE_CLASSIC,JSON.stringify(C))}
 function loadAll(){try{let x=JSON.parse(localStorage.getItem(SAVE_CLASSIC));if(x?.songs?.length===64)C=x}catch{}}
