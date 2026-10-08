@@ -55,38 +55,27 @@ h1 em{font-style:normal;color:#ff6d7c}h1 .brand{color:#ff6d7c;font-size:1.1em}h1
 .clear-artist:hover{color:#fff;background:#ffffff12;transform:scale(1.08)}
 .clear-artist:active{transform:scale(.92)}
 .clear-artist[hidden]{display:none}
+
+.classicwrap{border-radius:18px;box-shadow:0 20px 60px #0004}.classic{min-width:1680px;grid-template-columns:repeat(7,minmax(180px,1fr));gap:10px}.cmatch{border-radius:10px}.cname{font-size:12px}.rtitle{font-size:13px;letter-spacing:.5px}.actions .btn:first-child{background:linear-gradient(135deg,#f55369,#c83c72);color:white;border-color:transparent;box-shadow:0 6px 22px #ef446033}.actions .btn:first-child:hover{transform:translateY(-2px)}.roundhead{margin-top:20px}
 </style></head><body><div class="w">
 <h1><span class="brand">♫</span> MUSIC <em>BATTLE</em><span class="tag">64</span></h1>
-<div class="sub">选出你心中的最佳歌曲</div>
+<div class="sub">64 首歌 · 1 位冠军</div>
 
-<div class="modebox">
-  
-  <button id="classicMode" class="btn active">经典淘汰赛</button>
-  <button id="swissMode" class="btn">瑞士轮 · TOP 8</button>
-  <span id="swissOptions" style="display:none">
-    <label>瑞士轮轮数：
-      <select id="roundCount"><option value="5">5轮</option><option value="6" selected>6轮</option><option value="7">7轮</option></select>
-    </label>
-    <label style="margin-left:8px"><input type="checkbox" id="autoLock" checked> 数学确定后自动标记晋级/淘汰</label>
-  </span>
-</div>
-
-<div class="tools searchbar"><input id="artist" type="search" placeholder="输入歌手名称，如 周杰伦" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button id="clearArtist" class="clear-artist" type="button" aria-label="清空歌手名称" title="清空">×</button><button id="search" class="btn red">搜索并开始 <span aria-hidden="true">↗</span></button></div><div class="actions"><button id="restart" class="btn">↻ 重新开始</button><button id="clear" class="btn">清除存档</button><button id="toggleManual" class="btn">导入歌单 <span id="chevron">⌄</span></button></div>
+<div class="tools searchbar"><input id="artist" type="search" placeholder="输入歌手名称，如 周杰伦" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button id="clearArtist" class="clear-artist" type="button" aria-label="清空歌手名称" title="清空">×</button><button id="search" class="btn red">搜索并开始 <span aria-hidden="true">↗</span></button></div><div class="actions"><button id="exportPng" class="btn">↓ 导出完整赛程 PNG</button><button id="exportSvg" class="btn">SVG</button><button id="exportTier" class="btn red">↓ 导出夯到拉排行榜</button><button id="restart" class="btn">↻ 重新开始</button><button id="clear" class="btn">清除存档</button><button id="toggleManual" class="btn">导入歌单 <span id="chevron">⌄</span></button></div>
 <div id="manualPanel" class="manualpanel" hidden><textarea id="manual" rows="4" placeholder="每行一首，共64首。例如：晴天 - 周杰伦"></textarea><button id="import" class="btn red">使用歌单开始</button></div><p id="status" class="muted" role="status" aria-live="polite"></p>
 <div id="now" class="now"><button id="stop" class="btn">■ 停止</button><span id="nowtext"></span></div>
 <div id="subtabs"></div><div id="view"></div><audio id="audio"></audio>
 </div>
 <script>
-const SAVE_CLASSIC='shareClassic64_v1', SAVE_SWISS='shareSwiss64_v1';
-let mode='classic',ext=false,seq=1,pending=new Map(),audio=document.querySelector('#audio'),timer=null;
+const SAVE_CLASSIC='shareClassic64_v1';
+let ext=false,seq=1,pending=new Map(),audio=document.querySelector('#audio'),timer=null;
 let songs=[];
 let C={artist:'',songs:[],winners:Array.from({length:6},()=>[])};
-let S={artist:'',songs:[],totalRounds:6,round:0,rounds:[],stats:{},seed:{},ko:null,autoLock:true};
 
 const $=s=>document.querySelector(s);
-// GitHub Pages frontend. Configure a same-origin Worker proxy or a Worker URL below.
+// 国内部署时使用同源 /api/search。
 const API_BASE = ''; // Optional default; on Vercel the built-in /api/search is used automatically.
-const isVercel = location.hostname.endsWith('.vercel.app');
+
 const getApiBase = () => (localStorage.getItem('musicBattleApiBase') || API_BASE || (location.protocol.startsWith('http') ? location.origin : '')).replace(/\/$/, '');
 
 async function bridge(action,payload={}){
@@ -97,7 +86,7 @@ async function bridge(action,payload={}){
     const base=getApiBase();
     if(!base)throw Error('请通过已部署的网址打开游戏');
     const r=await fetch(base+'/api/search?artist='+encodeURIComponent(artist),{signal:AbortSignal.timeout(25000)});
-    let d;try{d=await r.json()}catch{throw Error('搜索接口未部署或返回了网页，请确认 GitHub 中存在 api/search.js 并重新部署 Vercel')}
+    let d;try{d=await r.json()}catch{throw Error('搜索接口未部署或返回网页，请确认 Cloudflare Pages Functions 已部署')}
     if(!r.ok)throw Error(d?.error||'搜索接口错误 HTTP '+r.status);
     return {songs:d.songs||[]};
   }
@@ -117,15 +106,11 @@ function chorusStart(o,d){let nums=[];(function walk(x,k=''){if(x==null)return;i
 async function play(t,hot){stop();try{let p=await bridge('playurl',{id:t.id});if(!p.url)throw Error('没有播放地址');audio.src=p.url;await audio.play();if(hot){timer=setTimeout(stop,30000)}$('#nowtext').textContent=(hot?'🔥 ':'▶ ')+t.title+' · '+(p.level||'可用音质');$('#now').classList.add('show')}catch(e){msg('播放失败：'+e.message,true)}}$('#stop').onclick=stop;
 
 function saveClassic(){localStorage.setItem(SAVE_CLASSIC,JSON.stringify(C))}
-function saveSwiss(){localStorage.setItem(SAVE_SWISS,JSON.stringify(S))}
-function loadAll(){try{let x=JSON.parse(localStorage.getItem(SAVE_CLASSIC));if(x?.songs?.length)C=x}catch{}try{let x=JSON.parse(localStorage.getItem(SAVE_SWISS));if(x?.songs?.length)S=x}catch{}}
-
-function setMode(m){mode=m;$('#classicMode').classList.toggle('active',m==='classic');$('#swissMode').classList.toggle('active',m==='swiss');$('#swissOptions').style.display=m==='swiss'?'inline-flex':'none';if(m==='classic'){renderClassic()}else{$('#roundCount').value=String(S.totalRounds||6);$('#autoLock').checked=S.autoLock!==false;renderSwiss()}}
-$('#classicMode').onclick=()=>setMode('classic');$('#swissMode').onclick=()=>setMode('swiss');
+function loadAll(){try{let x=JSON.parse(localStorage.getItem(SAVE_CLASSIC));if(x?.songs?.length===64)C=x}catch{}}
 
 async function searchSongs(artist){
   const d=await bridge('search',{artist}),target=norm(artist);
-  let all=(d.songs||[]).map(s=>({id:s.id,title:s.name,author:(s.artists||[]).join(' / '),duration:s.duration||0,preview:s.preview||'',link:s.link||''}));
+  let all=(d.songs||[]).map(s=>({id:s.id,title:s.name,author:(s.artists||[]).join(' / '),duration:s.duration||0,preview:s.preview||'',link:s.link||'',cover:s.cover||''}));
   let strict=all.filter(x=>{let a=norm(x.author);return a&&(a.includes(target)||target.includes(a))});
   const seen=new Set(),out=[];for(const x of strict){let k=norm(x.title).replace(/[^\p{L}\p{N}]/gu,'')+'|'+norm(x.author);if(!seen.has(k)){seen.add(k);out.push(x)}if(out.length>=64)break}
   if(out.length<64)throw Error('搜索到 '+out.length+' 首匹配歌曲；本赛制要求64首，请尝试更完整的歌手曲库或使用歌单导入。');
@@ -136,11 +121,7 @@ $('#search').onclick=async()=>{
   const artist=$('#artist').value.trim();if(!artist)return msg('请输入歌手名称',true);const btn=$('#search');btn.disabled=true;btn.classList.add('loading');msg('正在搜索「'+artist+'」…');
   try{
     const out=await searchSongs(artist);
-    if(mode==='classic'){
-      C={artist,songs:out,winners:Array.from({length:6},()=>[])};saveClassic();renderClassic();msg('已生成经典64强淘汰赛。')
-    }else{
-      S={artist,songs:out,totalRounds:+$('#roundCount').value,round:0,rounds:[],stats:{},seed:{},ko:null,autoLock:$('#autoLock').checked};initSwissStats();S.rounds[0]=pairSwissRound();saveSwiss();renderSwiss();msg('已生成 '+out.length+' 首歌曲的第1轮瑞士轮。')
-    }
+    C={artist,songs:out,winners:Array.from({length:6},()=>[])};saveClassic();renderClassic();msg('64 首歌曲已就位。')
   }catch(e){msg('搜索失败：'+e.message,true)}finally{btn.disabled=false;btn.classList.remove('loading')}
 };
 // Search text is never derived from saved artist or rerendered tournament state.
@@ -156,30 +137,20 @@ $('#import').onclick=()=>{
  if(lines.length!==64)return msg('请粘贴恰好64首歌（每行一首），当前 '+lines.length+' 首。',true);
  const artist=$('#artist').value.trim()||'自定义歌单';
  const out=lines.map((line,i)=>{const parts=line.split(/\s+[-—–]\s+/);const title=(parts[0]||'').trim();const author=parts.slice(1).join(' - ')||artist;return{id:'manual'+i,title,author,duration:0,preview:'',link:'https://music.163.com/#/search/m/?s='+encodeURIComponent(title+' '+author)}});
- if(mode==='classic'){C={artist,songs:out,winners:Array.from({length:6},()=>[])};saveClassic();renderClassic()}
- else{S={artist,songs:out,totalRounds:+$('#roundCount').value,round:0,rounds:[],stats:{},seed:{},ko:null,autoLock:$('#autoLock').checked};initSwissStats();S.rounds[0]=pairSwissRound();saveSwiss();renderSwiss()}
+ C={artist,songs:out,winners:Array.from({length:6},()=>[])};saveClassic();renderClassic();
  msg('已从歌单生成64首歌曲。点击 ↗ 可在网易云搜索播放。');
 };
 
 
-$('#restart').onclick=()=>{
-  if(mode==='classic'){if(!C.songs.length)return;C.winners=Array.from({length:6},()=>[]);saveClassic();renderClassic();msg('经典淘汰赛已重新开始。')}
-  else{if(!S.songs.length)return;S.round=0;S.rounds=[];S.ko=null;S.totalRounds=+$('#roundCount').value;S.autoLock=$('#autoLock').checked;initSwissStats();S.rounds[0]=pairSwissRound();saveSwiss();renderSwiss();msg('瑞士轮已重新开始。')}
-};
-$('#clear').onclick=()=>{
-  if(mode==='classic'){localStorage.removeItem(SAVE_CLASSIC);C={artist:'',songs:[],winners:Array.from({length:6},()=>[])};renderClassic()}
-  else{localStorage.removeItem(SAVE_SWISS);S={artist:'',songs:[],totalRounds:+$('#roundCount').value,round:0,rounds:[],stats:{},seed:{},ko:null,autoLock:$('#autoLock').checked};renderSwiss()}
-  msg('当前模式存档已删除。')
-};
-$('#roundCount').onchange=()=>{if(mode==='swiss'&&!S.songs.length)S.totalRounds=+$('#roundCount').value};
-$('#autoLock').onchange=()=>{S.autoLock=$('#autoLock').checked;saveSwiss();if(mode==='swiss')renderSwiss()};
+$('#restart').onclick=()=>{if(!C.songs.length)return;if(!confirm('重新开始本届比赛？'))return;C.winners=Array.from({length:6},()=>[]);saveClassic();renderClassic();msg('已重新开始。')};
+$('#clear').onclick=()=>{if(!confirm('删除当前比赛和存档？'))return;localStorage.removeItem(SAVE_CLASSIC);C={artist:'',songs:[],winners:Array.from({length:6},()=>[])};renderClassic();msg('存档已清除。')};
 
 function classicEntrants(r){return r===0?C.songs:C.winners[r-1]}
 function classicPick(r,i,t){C.winners[r][i]=t;for(let x=r+1;x<6;x++)C.winners[x][Math.floor(i/2**(x-r))]=undefined;saveClassic();renderClassic()}
 function classicRow(t,r,i,w){const row=document.createElement('div');row.className='csong';const b=document.createElement('button');b.className='cname '+((w?.id===t.id)?'sel':'');b.textContent=t.title;b.title=t.title+' — '+t.author;b.onclick=()=>classicPick(r,i,t);const p=document.createElement('button');p.className='cmini';p.textContent='▶';p.onclick=()=>play(t,false);const h=document.createElement('button');h.className='cmini';h.textContent='🔥';h.onclick=()=>play(t,true);row.append(b,p,h);if(t.link){let l=document.createElement('a');l.href=t.link;l.target='_blank';l.rel='noopener';l.textContent='↗';l.title='打开曲目页面';row.append(l)}return row}
 function renderClassic(){
   $('#subtabs').innerHTML='';const v=$('#view');v.innerHTML='';
-  if(!C.songs.length){v.innerHTML='<p class=muted>经典淘汰赛：先搜索歌手生成64首歌曲。</p>';return}
+  if(!C.songs.length){v.innerHTML='<p class=muted>搜索歌手，开始你的 64 强淘汰赛。</p>';return}
   const wrap=document.createElement('div');wrap.className='classicwrap';const B=document.createElement('div');B.className='classic';const labels=['64强','32强','16强','8强','4强','决赛','冠军'];
   for(let r=0;r<7;r++){const c=document.createElement('section');c.className='round';const h=document.createElement('div');h.className='rtitle';h.textContent=labels[r];c.append(h);const s=document.createElement('div');s.className='matches';
     if(r===6){const m=document.createElement('div');m.className='cmatch';m.textContent=C.winners[5]?.[0]?.title||'等待冠军产生';s.append(m)}
@@ -189,61 +160,150 @@ function renderClassic(){
   wrap.append(B);v.append(wrap)
 }
 
-function initSwissStats(){S.stats={};S.seed={};S.songs.forEach((x,i)=>{S.stats[x.id]={w:0,l:0,opp:[],played:[]};S.seed[x.id]=i+1})}
-function buch(id){return (S.stats[id]?.opp||[]).reduce((a,o)=>a+(S.stats[o]?.w||0),0)}
-function oppPct(id){let o=S.stats[id]?.opp||[];return o.length?o.reduce((a,x)=>{let q=S.stats[x];return a+q.w/Math.max(1,q.w+q.l)},0)/o.length:0}
-function cmpSwiss(a,b){let A=S.stats[a.id],B=S.stats[b.id];return B.w-A.w||buch(b.id)-buch(a.id)||oppPct(b.id)-oppPct(a.id)||S.seed[a.id]-S.seed[b.id]}
-function pairSwissRound(){let pool=S.songs.slice().sort(cmpSwiss),pairs=[];while(pool.length){let a=pool.shift(),ai=S.stats[a.id],idx=pool.findIndex(b=>!ai.played.includes(b.id));if(idx<0)idx=0;let b=pool.splice(idx,1)[0];if(!b)throw Error('瑞士轮需要偶数首歌曲');pairs.push({a:a.id,b:b.id,winner:null})}return pairs}
-function swissSong(id){return S.songs.find(x=>x.id===id)}
-function swissPick(ri,mi,id){let m=S.rounds[ri][mi];if(m.winner===id)return;if(m.winner){let old=m.winner,loser=old===m.a?m.b:m.a;S.stats[old].w--;S.stats[loser].l--}m.winner=id;let loser=id===m.a?m.b:m.a;S.stats[id].w++;S.stats[loser].l++;saveSwiss();renderSwiss()}
-function lockStatus(id){
-  if(!S.autoLock)return '';
-  const st=S.stats[id], remaining=Math.max(0,S.totalRounds-S.round-(S.rounds[S.round]?.every(m=>m.winner)?1:0));
-  const worst=st.w, best=st.w+remaining;
-  let canReachWorst=0, alreadyAboveBest=0;
-  for(const t of S.songs){if(t.id===id)continue;const q=S.stats[t.id], qBest=q.w+remaining, qWorst=q.w;if(qBest>=worst)canReachWorst++;if(qWorst>best)alreadyAboveBest++}
-  if(canReachWorst<=7)return 'Q';
-  if(alreadyAboveBest>=8)return 'E';
-  return '';
-}
-function completeSwissRound(){
-  let r=S.rounds[S.round];if(!r||r.some(m=>!m.winner))return msg('这一轮还有比赛没有选择胜者。',true);
-  r.forEach(m=>{if(!S.stats[m.a].played.includes(m.b)){S.stats[m.a].played.push(m.b);S.stats[m.b].played.push(m.a);S.stats[m.a].opp.push(m.b);S.stats[m.b].opp.push(m.a)}});
-  if(S.round+1>=S.totalRounds){S.round=S.totalRounds;saveSwiss();showRank();msg(S.totalRounds+'轮瑞士轮完成！');return}
-  S.round++;S.rounds[S.round]=pairSwissRound();saveSwiss();renderSwiss();msg('已生成第 '+(S.round+1)+' 轮。')
-}
-function swissRow(t,ri,mi,w){let div=document.createElement('div');div.className='songrow';let b=document.createElement('button');b.className='btn pick '+(w===t.id?'win':'');let st=S.stats[t.id],lk=lockStatus(t.id);b.textContent=t.title+'  ['+st.w+'-'+st.l+']'+(lk==='Q'?'  ✅锁定晋级':lk==='E'?'  ❌锁定淘汰':'');b.onclick=()=>swissPick(ri,mi,t.id);let p=document.createElement('button');p.className='btn mini';p.textContent='▶';p.onclick=()=>play(t,false);let h=document.createElement('button');h.className='btn mini';h.textContent='🔥';h.onclick=()=>play(t,true);div.append(b,p,h);if(t.link){let l=document.createElement('a');l.href=t.link;l.target='_blank';l.rel='noopener';l.textContent='↗';div.append(l)}return div}
-function swissTabs(){
-  $('#subtabs').innerHTML='<div class="bar"><button id="stRound" class="btn">当前轮次</button><button id="stRank" class="btn">📊 排名</button><button id="stKO" class="btn">🏆 Top8淘汰赛</button></div>';
-  $('#stRound').onclick=renderSwiss;$('#stRank').onclick=showRank;$('#stKO').onclick=showKO;
-}
-function renderSwiss(){
-  swissTabs();const v=$('#view');v.innerHTML='';
-  if(!S.songs.length){v.innerHTML='<p class=muted>瑞士轮模式：先选择5/6/7轮并搜索歌手。</p>';return}
-  if(S.round>=S.totalRounds){showRank();return}
-  const head=document.createElement('div');head.className='roundhead';head.innerHTML='<h2>第 '+(S.round+1)+' / '+S.totalRounds+' 轮</h2>';const next=document.createElement('button');next.className='btn red';next.textContent=S.round===S.totalRounds-1?'完成瑞士轮 → 排名':'完成本轮 → 生成下一轮';next.onclick=completeSwissRound;head.append(next);v.append(head);
-  const g=document.createElement('div');g.className='grid';(S.rounds[S.round]||[]).forEach((m,i)=>{let d=document.createElement('div');d.className='match';d.append(swissRow(swissSong(m.a),S.round,i,m.winner),swissRow(swissSong(m.b),S.round,i,m.winner));g.append(d)});v.append(g)
-}
-function standings(){return S.songs.slice().sort(cmpSwiss)}
-function showRank(){
-  swissTabs();const v=$('#view');v.innerHTML='<div class=roundhead><h2>瑞士轮排名</h2></div>';if(!S.songs.length)return;
-  let arr=standings(),table=document.createElement('table');table.className='rank';table.innerHTML='<thead><tr><th>#</th><th>歌曲</th><th>战绩</th><th>Buchholz</th><th>对手胜率</th><th>锁定状态</th></tr></thead>';let tb=document.createElement('tbody');
-  arr.forEach((t,i)=>{let q=S.stats[t.id],lk=lockStatus(t.id),tr=document.createElement('tr');if(i<8)tr.className='top8';tr.innerHTML='<td>'+(i+1)+'</td><td>'+esc(t.title)+'</td><td>'+q.w+'-'+q.l+'</td><td>'+buch(t.id)+'</td><td>'+(oppPct(t.id)*100).toFixed(1)+'%</td><td class="'+(lk==='Q'?'lockq':lk==='E'?'locke':'')+'">'+(lk==='Q'?'✅ 数学锁定晋级':lk==='E'?'❌ 数学锁定淘汰':'—')+'</td>';tb.append(tr)});table.append(tb);v.append(table);
-  if(S.round>=S.totalRounds){let b=document.createElement('button');b.className='btn red';b.style.marginTop='12px';b.textContent=S.ko?'进入 Top 8 淘汰赛':'锁定 Top 8 → 开始淘汰赛';b.onclick=()=>{if(!S.ko)initKO();showKO()};v.append(b)}
-}
-function initKO(){let a=standings().slice(0,8),order=[0,7,3,4,1,6,2,5];S.ko={round:0,rounds:[[0,1,2,3].map(i=>({a:a[order[i*2]].id,b:a[order[i*2+1]].id,winner:null}))]};saveSwiss()}
-function koPick(ri,mi,id){S.ko.rounds[ri][mi].winner=id;S.ko.rounds=S.ko.rounds.slice(0,ri+1);saveSwiss();showKO()}
-function advanceKO(){let r=S.ko.rounds[S.ko.round];if(r.some(m=>!m.winner))return msg('这一轮淘汰赛还有比赛未选择胜者。',true);if(r.length===1){msg('冠军已经产生！ 🏆');return}let ws=r.map(m=>m.winner),n=[];for(let i=0;i<ws.length;i+=2)n.push({a:ws[i],b:ws[i+1],winner:null});S.ko.round++;S.ko.rounds[S.ko.round]=n;saveSwiss();showKO()}
-function koRow(t,ri,mi,w){let d=document.createElement('div');d.className='songrow';let b=document.createElement('button');b.className='btn pick '+(w===t.id?'win':'');b.textContent=t.title;b.onclick=()=>koPick(ri,mi,t.id);let p=document.createElement('button');p.className='btn mini';p.textContent='▶';p.onclick=()=>play(t,false);let h=document.createElement('button');h.className='btn mini';h.textContent='🔥';h.onclick=()=>play(t,true);d.append(b,p,h);if(t.link){let l=document.createElement('a');l.href=t.link;l.target='_blank';l.rel='noopener';l.textContent='↗';d.append(l)}return d}
-function showKO(){
-  swissTabs();const v=$('#view');v.innerHTML='';if(!S.ko){v.innerHTML='<p class=muted>完成全部瑞士轮并锁定 Top 8 后进入淘汰赛。</p>';return}
-  const labels=['8强','4强','决赛'],br=document.createElement('div');br.className='bracket';
-  for(let r=0;r<3;r++){let c=document.createElement('div');c.className='bcol';c.innerHTML='<div class=btitle>'+labels[r]+'</div>';let ms=document.createElement('div');ms.className='bmatches';(S.ko.rounds[r]||[]).forEach((m,i)=>{let x=document.createElement('div');x.className='match';x.append(koRow(swissSong(m.a),r,i,m.winner),koRow(swissSong(m.b),r,i,m.winner));ms.append(x)});c.append(ms);br.append(c)}
-  let champ=document.createElement('div');champ.className='bcol';let cw=S.ko.rounds[2]?.[0]?.winner;champ.innerHTML='<div class=btitle>冠军</div><div class="bmatches champ">'+(cw?'🏆 '+esc(swissSong(cw).title):'等待冠军')+'</div>';br.append(champ);v.append(br);
-  let b=document.createElement('button');b.className='btn red';b.textContent=S.ko.round===2?'确认冠军':'完成本轮淘汰赛 → 下一轮';b.onclick=advanceKO;v.append(b)
-}
 function esc(x){let d=document.createElement('div');d.textContent=x;return d.innerHTML}
 
-loadAll();setMode('classic');
+
+/* Full bracket poster: native SVG elements, no third-party scripts or external fonts. */
+const posterEscape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+const posterShort=(s,n=16)=>{s=String(s||'—');return [...s].length>n?[...s].slice(0,n-1).join('')+'…':s};
+function posterSVG(){
+ if(C.songs.length!==64)throw Error('请先生成64首歌曲');
+ const W=2540,H=2420,left=58,top=290,colW=334,gap=18,baseY=350,step=58;
+ const labels=['ROUND OF 64','ROUND OF 32','SWEET 16','QUARTERFINALS','SEMIFINALS','FINAL','CHAMPION'];
+ let out=[`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
+ `<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#151923"/><stop offset="1" stop-color="#080a0f"/></linearGradient><linearGradient id="accent" x2="1" y2="0"><stop stop-color="#ff7289"/><stop offset="1" stop-color="#b94476"/></linearGradient></defs>`,
+ `<rect width="${W}" height="${H}" fill="url(#bg)"/><rect x="58" y="64" width="8" height="112" rx="4" fill="url(#accent)"/>`,
+ `<text x="88" y="116" font-size="48" font-weight="800" fill="#f9f6fa" font-family="sans-serif">MUSIC BATTLE</text>`,
+ `<text x="88" y="166" font-size="28" fill="#d0b4c0" font-family="sans-serif">${posterEscape(C.artist||'64 SONGS')} · 64 SONGS / ONE WINNER</text>`,
+ `<text x="${W-58}" y="116" text-anchor="end" font-size="27" fill="#ff8fa3" font-family="sans-serif">TOURNAMENT BRACKET</text>`,
+ `<path d="M58 205 H${W-58}" stroke="#41404c" stroke-width="2"/>`];
+ const box=(x,y,w,h,fill,stroke='#383744',r=12)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`;
+ const txt=(x,y,text,color='#e7e7ef',size=20,weight=500)=>`<text x="${x}" y="${y}" fill="${color}" font-size="${size}" font-weight="${weight}" font-family="sans-serif">${posterEscape(text)}</text>`;
+ for(let r=0;r<7;r++){
+  const x=left+r*(colW+gap),count=r===6?1:32>>r;
+  out.push(txt(x+8,262,labels[r],'#f58b9d',21,750));
+  for(let i=0;i<count;i++){
+   const h=r===0?53:Math.min(150,step*2**r-12);
+   const cy=baseY+(i+.5)*step*2**r-step/2;
+   const y=cy-h/2;
+   const w=colW-8;
+   out.push(box(x,y,w,h,r===6?'#382330':'#1e222c',r===6?'#f47591':'#353a48'));
+   if(r===6){const champion=C.winners[5]?.[0];out.push(txt(x+15,cy+8,champion?'★ '+posterShort(champion.title,17):'等待冠军','#ffd38b',25,750));continue}
+   const arr=classicEntrants(r),winner=C.winners[r]?.[i];
+   const a=arr?.[2*i],b=arr?.[2*i+1];
+   if(r===0){
+    out.push(txt(x+12,cy-5,posterShort(a?.title||'—',19),winner?.id===a?.id?'#ffb0c1':'#f0f1f5',18,winner?.id===a?.id?800:500));
+    out.push(`<path d="M${x+12} ${cy+1} H${x+w-12}" stroke="#373b47"/>`);
+    out.push(txt(x+12,cy+20,posterShort(b?.title||'—',19),winner?.id===b?.id?'#ffb0c1':'#a6abb7',18,winner?.id===b?.id?800:500));
+   }else{
+    out.push(txt(x+12,cy-6,posterShort(a?.title||'—',18),winner?.id===a?.id?'#ffb0c1':'#eff0f5',20,winner?.id===a?.id?800:500));
+    out.push(`<path d="M${x+12} ${cy+1} H${x+w-12}" stroke="#373b47"/>`);
+    out.push(txt(x+12,cy+24,posterShort(b?.title||'—',18),winner?.id===b?.id?'#ffb0c1':'#a6abb7',20,winner?.id===b?.id?800:500));
+   }
+  }
+ }
+ out.push(txt(58,H-38,'64 SONGS · 6 ROUNDS · 1 CHAMPION','#81818f',20));
+ out.push('</svg>');return out.join('');
+}
+function saveBlob(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+function posterName(ext){return 'Music-Battle-'+(C.artist||'64').replace(/[\\/:*?"<>|]/g,'').slice(0,32)+'.'+ext}
+/* '夯到拉' tier list is based only on recorded bracket results. */
+function tierGroups(){
+ if(C.songs.length!==64)throw Error('请先生成64首歌曲');
+ const tiers=[{name:'夯',sub:'CHAMPION',color:'#ffba64',items:[]},{name:'顶级',sub:'RUNNER-UP',color:'#ff879f',items:[]},{name:'人上人',sub:'TOP 4',color:'#e4a2f8',items:[]},{name:'还行',sub:'TOP 8',color:'#9cb6ff',items:[]},{name:'NPC',sub:'TOP 16',color:'#9acfd2',items:[]},{name:'拉',sub:'TOP 32',color:'#b1b7c4',items:[]},{name:'拉完了',sub:'ROUND OF 64',color:'#858b9a',items:[]}];
+ const eliminated=new Set();
+ for(let r=0;r<6;r++){
+  const entrants=classicEntrants(r);
+  for(let i=0;i<32/2**r;i++){
+   const a=entrants[2*i],b=entrants[2*i+1],w=C.winners[r]?.[i];
+   if(!a||!b||!w)continue;
+   const loser=w.id===a.id?b:w.id===b.id?a:null;
+   if(loser){tiers[6-r].items.push(loser);eliminated.add(String(loser.id))}
+  }
+ }
+ const champion=C.winners[5]?.[0];
+ if(champion){tiers[0].items.push(champion);eliminated.add(String(champion.id))}
+ const pending=C.songs.filter(t=>!eliminated.has(String(t.id)));
+ return {tiers,pending};
+}
+function tierSVG(covers={}){
+ const {tiers,pending}=tierGroups();
+ const W=1720,margin=64,inner=W-2*margin,gap=12,header=218,footer=92;
+ const cardW=154,cardH=194,cols=9,cardGap=12,left=margin+196;
+ const rowHeight=items=>Math.max(122,30+Math.ceil(items.length/cols)*(cardH+cardGap));
+ const heights=tiers.map(t=>rowHeight(t.items));
+ const pendingH=pending.length?rowHeight(pending):0;
+ const H=header+heights.reduce((a,b)=>a+b+gap,0)+(pending.length?pendingH+gap:0)+footer;
+ const esc=posterEscape;
+ const out=[`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
+ '<defs><linearGradient id="tierbg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1b1b2b"/><stop offset=".52" stop-color="#11121b"/><stop offset="1" stop-color="#08090f"/></linearGradient><linearGradient id="coverFallback" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#54314b"/><stop offset="1" stop-color="#262c49"/></linearGradient></defs>',
+ `<rect width="${W}" height="${H}" fill="url(#tierbg)"/>`,
+ `<circle cx="${W-100}" cy="80" r="250" fill="#e4547d" opacity=".055"/>`,
+ `<text x="${margin}" y="96" fill="#faf8fc" font-size="67" font-weight="900" font-family="sans-serif">从夯到拉</text>`,
+ `<text x="${margin}" y="151" fill="#afb3c4" font-size="27" font-family="sans-serif">${esc(posterShort(C.artist||'MUSIC BATTLE',40))} · 64 SONG TIER LIST</text>`,
+ `<text x="${W-margin}" y="94" text-anchor="end" fill="#fa87a4" font-size="26" font-weight="800" font-family="sans-serif">MUSIC BATTLE / 64</text>`,
+ `<path d="M${margin} 183 H${W-margin}" stroke="#363747" stroke-width="2"/>`];
+ let y=header;
+ function row(t,h){
+  const {name,sub,color,items}=t;
+  out.push(`<rect x="${margin}" y="${y}" width="${inner}" height="${h}" rx="17" fill="#1c1e2a" stroke="#343747" stroke-width="2"/>`);
+  out.push(`<path d="M${margin+174} ${y} H${margin+174} V${y+h}" stroke="#343747" stroke-width="2"/>`);
+  out.push(`<rect x="${margin}" y="${y}" width="174" height="${h}" rx="17" fill="${color}"/>`);
+  out.push(`<rect x="${margin+156}" y="${y}" width="18" height="${h}" fill="${color}"/>`);
+  out.push(`<text x="${margin+87}" y="${y+h/2-14}" text-anchor="middle" fill="#1b1b24" font-size="41" font-weight="900" font-family="sans-serif">${esc(name)}</text>`);
+  out.push(`<text x="${margin+87}" y="${y+h/2+18}" text-anchor="middle" fill="#37313c" font-size="15" font-weight="750" font-family="sans-serif">${esc(sub)}</text>`);
+  items.forEach((song,i)=>{
+   const x=left+(i%cols)*(cardW+cardGap),cy=y+16+Math.floor(i/cols)*(cardH+cardGap);
+   const cover=covers[String(song.id)];
+   out.push(`<rect x="${x}" y="${cy}" width="${cardW}" height="${cardH}" rx="10" fill="#292d3a"/>`);
+   out.push(`<rect x="${x+5}" y="${cy+5}" width="${cardW-10}" height="${cardW-10}" rx="7" fill="url(#coverFallback)"/>`);
+   if(cover){out.push(`<image x="${x+5}" y="${cy+5}" width="${cardW-10}" height="${cardW-10}" preserveAspectRatio="xMidYMid slice" href="${cover}"/>`)}
+   else {out.push(`<text x="${x+cardW/2}" y="${cy+86}" text-anchor="middle" fill="#ffffff88" font-size="46" font-weight="800" font-family="sans-serif">♫</text>`)}
+   out.push(`<text x="${x+9}" y="${cy+174}" fill="#f5f5fa" font-size="16" font-weight="650" font-family="sans-serif">${esc(posterShort(song.title,9))}</text>`);
+  });
+  y+=h+gap;
+ }
+ tiers.forEach((t,i)=>row(t,heights[i]));
+ if(pending.length)row({name:'待定',sub:'IN PLAY',color:'#e3d3a9',items:pending},pendingH);
+ out.push(`<text x="${margin}" y="${H-37}" fill="#8b8e9f" font-size="22" font-family="sans-serif">淘汰赛成绩自动分档 · 同档不分先后 · ${pending.length?'比赛进行中':'比赛已完成'}</text>`);
+ out.push('</svg>');return {svg:out.join(''),width:W,height:H};
+}
+async function loadTierCovers(){
+ const {tiers,pending}=tierGroups();const items=[...tiers.flatMap(t=>t.items),...pending];
+ const covers={};let next=0;
+ async function worker(){while(next<items.length){const song=items[next++];if(!song.cover)continue;
+  try{const r=await fetch(song.cover,{mode:'cors',signal:AbortSignal.timeout(2800)});if(!r.ok)continue;
+   const blob=await r.blob();if(!blob.type.startsWith('image/')||blob.size>1500000)continue;
+   const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});
+   covers[String(song.id)]=data;
+  }catch{} }
+ }
+ await Promise.all(Array.from({length:6},worker));return covers;
+}
+$('#exportTier').onclick=async()=>{
+ const b=$('#exportTier');b.disabled=true;b.textContent='正在生成排行榜…';
+ try{
+  const covers=await loadTierCovers();const {svg,width,height}=tierSVG(covers);
+  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+  try{
+   const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});
+   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+   const ctx=canvas.getContext('2d');if(!ctx)throw Error('无法创建图片画布');ctx.drawImage(img,0,0);
+   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+   if(!blob)throw Error('PNG 生成失败');
+   saveBlob(blob,'夯到拉排行榜-'+(C.artist||'64首').replace(/[\\/:*?"<>|]/g,'').slice(0,30)+'.png');
+   msg('排行榜图片已导出。');
+  }finally{URL.revokeObjectURL(url)}
+ }catch(e){msg('排行榜导出失败：'+e.message,true)}
+ finally{b.disabled=false;b.textContent='↓ 导出夯到拉排行榜'}
+};
+
+$('#exportSvg').onclick=()=>{try{saveBlob(new Blob([posterSVG()],{type:'image/svg+xml;charset=utf-8'}),posterName('svg'));msg('高清 SVG 已导出。')}catch(e){msg(e.message,true)}};
+$('#exportPng').onclick=async()=>{const b=$('#exportPng');b.disabled=true;b.textContent='正在生成…';try{
+ const svg=posterSVG(),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+ try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url});const c=document.createElement('canvas');c.width=2540;c.height=2420;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);const blob=await new Promise(r=>c.toBlob(r,'image/png'));if(!blob)throw Error('PNG 编码失败');saveBlob(blob,posterName('png'));msg('完整赛程图已导出。')}finally{URL.revokeObjectURL(url)}
+ }catch(e){msg('PNG 导出失败：'+e.message+'。可改用 SVG 导出。',true)}finally{b.disabled=false;b.textContent='↓ 导出完整赛程 PNG'}};
+
+loadAll();renderClassic();
 setTimeout(()=>{void 0},1500);
 </script></body></html>
