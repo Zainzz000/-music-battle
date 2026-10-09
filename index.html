@@ -89,9 +89,22 @@ h1 em,.brand{color:var(--r)}h1 .tag{background:#fff;color:var(--r);border:1px so
 .player-open{margin-left:auto;padding:8px 11px;border:1px solid #f0cecc;border-radius:10px;background:#fff6f5;color:#c83f3c;text-decoration:none;font-size:12px;font-weight:650;white-space:nowrap}
 .player-open:hover{background:#e54845;color:#fff}
 .player-close{width:34px;height:34px;border:1px solid #e7e7e9;border-radius:50%;background:#fafafb;color:#777;cursor:pointer;font-size:21px;line-height:1}
-.player-loading{width:min(100%,330px);padding:14px 16px;border-radius:12px;background:#f7f7f8;color:#898a8f;font-size:13px}
-.player-loading[hidden]{display:none}
-#officialPlayer{display:block;width:min(100%,330px);height:86px;border:0;border-radius:12px;background:#eee}
+.player-card{display:flex;align-items:center;gap:14px;width:min(100%,620px);min-height:108px;padding:10px;border-radius:14px;background:#f5f5f6}
+.player-cover{width:88px;height:88px;flex:none;display:grid;place-items:center;border-radius:9px;overflow:hidden;background:#e54845;color:#fff;font-size:38px}
+.player-cover img{width:100%;height:100%;object-fit:cover}
+.player-main{min-width:0;flex:1;padding-right:4px}
+.player-track{display:flex;gap:7px;min-width:0;align-items:baseline;margin-bottom:14px}
+.player-track strong,.player-track span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.player-track strong{font-size:16px;font-weight:700;color:#303033}
+.player-track span{font-size:14px;color:#77787d}
+.player-controls{display:flex;align-items:center;gap:10px}
+.player-toggle{width:36px;height:36px;flex:none;border:0;border-radius:50%;background:#e54845;color:white;font-size:15px;cursor:pointer}
+.player-toggle:hover{background:#d9403e}
+.player-progress{--played:0%;width:100%;height:5px;flex:1;appearance:none;border-radius:9px;background:linear-gradient(to right,#e54845 var(--played),#d6d6d8 var(--played));cursor:pointer;accent-color:#e54845}
+.player-progress::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border:2px solid white;border-radius:50%;background:#e54845;box-shadow:0 1px 4px #0003}
+.player-progress::-moz-range-thumb{width:10px;height:10px;border:2px solid white;border-radius:50%;background:#e54845;box-shadow:0 1px 4px #0003}
+.player-time{flex:none;min-width:42px;text-align:right;color:#8a8a8f;font-size:12px;font-variant-numeric:tabular-nums}
+#audio{display:none}
 .grid{gap:14px}.match{background:#fff;border-color:#e4e4e6;box-shadow:0 8px 24px #24242a08}
 .match:hover{border-color:#e3b9b7;box-shadow:0 12px 28px #24242a0c}
 .swiss-match{gap:9px;padding:14px}.swiss-label{color:#9a9aa0;font-weight:700;letter-spacing:.12em}
@@ -113,7 +126,7 @@ h1 em,.brand{color:var(--r)}h1 .tag{background:#fff;color:var(--r);border:1px so
 .cname{color:#444}.cname.sel{background:#fff0ef;border-color:#e54845;color:#bd3735}
 .cmini{height:25px;width:27px;border-radius:8px}
 .clear-artist{color:#8a8a90}.clear-artist:hover{color:#d94341;background:#e5484510}
-@media(max-width:620px){.w{padding:22px 14px 48px}.modebox{width:100%}.modebox .btn{min-width:0}.searchbar{gap:4px}.searchbar .btn{padding:12px 10px}.now{padding:13px}.actions .btn{background:#fff}.classic{min-width:1600px}}
+@media(max-width:620px){.w{padding:22px 14px 48px}.modebox{width:100%}.modebox .btn{min-width:0}.searchbar{gap:4px}.searchbar .btn{padding:12px 10px}.now{padding:13px}.player-card{gap:10px;min-height:88px;padding:8px}.player-cover{width:70px;height:70px}.player-track{display:block;margin-bottom:10px}.player-track strong,.player-track span{display:block}.player-track span{font-size:12px;margin-top:2px}.player-controls{gap:7px}.player-toggle{width:32px;height:32px}.actions .btn{background:#fff}.classic{min-width:1600px}}
 </style></head><body><div class="w">
 <h1><span class="brand">♫</span> MUSIC <em>BATTLE</em><span class="tag">64</span></h1>
 <div class="sub">64 首歌 · 1 位冠军</div>
@@ -123,16 +136,16 @@ h1 em,.brand{color:var(--r)}h1 .tag{background:#fff;color:var(--r);border:1px so
 <div class="tools searchbar"><input id="artist" type="search" placeholder="输入歌手名称，如 周杰伦" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button id="clearArtist" class="clear-artist" type="button" aria-label="清空歌手名称" title="清空">×</button><button id="search" class="btn red">搜索并开始 <span aria-hidden="true">↗</span></button></div><div class="actions"><button id="exportPng" class="btn">↓ 导出完整赛程 PNG</button><button id="exportSvg" class="btn">SVG</button><button id="exportTier" class="btn red">↓ 导出夯到拉排行榜</button><button id="restart" class="btn">↻ 重新开始</button><button id="clear" class="btn">清除存档</button><button id="toggleManual" class="btn">导入歌单 <span id="chevron">⌄</span></button></div>
 <div id="manualPanel" class="manualpanel" hidden><textarea id="manual" rows="4" placeholder="每行一首，共64首。例如：晴天 - 周杰伦"></textarea><button id="import" class="btn red">使用歌单开始</button></div><p id="status" class="muted" role="status" aria-live="polite"></p>
 <section id="now" class="now" aria-label="网易云音乐播放器">
-  <div class="player-head"><span class="player-mark">♫</span><div><strong>网易云播放器</strong><small>若未自动播放，请点播放器内的播放按钮</small></div><a id="openNetEase" class="player-open" target="_blank" rel="noopener">在网易云打开 ↗</a><button id="stop" class="player-close" type="button" aria-label="关闭播放器">×</button></div>
-  <div id="playerLoading" class="player-loading" role="status">正在连接网易云播放器…</div>
-  <iframe id="officialPlayer" title="网易云音乐播放器" frameborder="no" border="0" marginwidth="0" marginheight="0" width="330" height="86" allow="autoplay; encrypted-media"></iframe>
+  <div class="player-head"><span class="player-mark">♫</span><div><strong>网易云播放器</strong><small>页面内试听</small></div><a id="openNetEase" class="player-open" target="_blank" rel="noopener">在网易云打开 ↗</a><button id="stop" class="player-close" type="button" aria-label="关闭播放器">×</button></div>
+  <div class="player-card"><div class="player-cover" id="playerCover">♫</div><div class="player-main"><div class="player-track"><strong id="trackTitle">选择一首歌开始试听</strong><span id="trackArtist"></span></div><div class="player-controls"><button id="playerToggle" class="player-toggle" type="button" aria-label="播放">▶</button><input id="playerProgress" class="player-progress" type="range" min="0" max="1000" value="0" aria-label="播放进度"><span id="playerTime" class="player-time">0:00</span></div></div></div>
+  <audio id="audio" preload="none"></audio>
 </section>
 <div id="subtabs"></div><div id="view"></div>
 </div>
 <script>
 const SAVE_CLASSIC='shareClassic64_v1';
 let ext=false,seq=1,pending=new Map();
-const officialPlayer=document.querySelector('#officialPlayer');
+const audio=document.querySelector('#audio');
 let songs=[];
 let C={artist:'',songs:[],winners:Array.from({length:6},()=>[])};
 let S={artist:'',songs:[],rounds:[]},mode='classic';
@@ -211,16 +224,30 @@ function swissNextRound(songs,rounds){
  throw Error('无法在避免重复对阵的前提下生成下一轮');
 }
 /* SWISS_LOGIC_END */
-function stop(){officialPlayer.removeAttribute('src');$('#now').classList.remove('show')}
+function formatTime(seconds){if(!Number.isFinite(seconds)||seconds<0)return '0:00';return Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0')}
+function syncPlayer(){
+ const duration=audio.duration,current=audio.currentTime||0,progress=Number.isFinite(duration)&&duration>0?current/duration:0;
+ $('#playerProgress').value=String(Math.round(progress*1000));$('#playerProgress').style.setProperty('--played',(progress*100)+'%');
+ $('#playerTime').textContent=formatTime(current)+' / '+formatTime(duration);
+ $('#playerToggle').textContent=audio.paused?'▶':'Ⅱ';$('#playerToggle').setAttribute('aria-label',audio.paused?'播放':'暂停');
+}
+function stop(){audio.pause();audio.removeAttribute('src');audio.load();syncPlayer();$('#now').classList.remove('show')}
 function play(t){
  const id=String(t.id||'');
  if(!/^\d+$/.test(id)){if(t.link)window.open(t.link,'_blank','noopener');else msg('这首歌没有网易云曲目链接。',true);return}
+ audio.pause();audio.src=`https://music.163.com/song/media/outer/url?id=${encodeURIComponent(id)}.mp3`;audio.load();
  $('#openNetEase').href=`https://music.163.com/#/song?id=${encodeURIComponent(id)}`;
- $('#playerLoading').hidden=false;$('#now').classList.add('show');$('#now').scrollIntoView({behavior:'smooth',block:'nearest'});
- officialPlayer.src=`https://music.163.com/outchain/player?type=2&id=${encodeURIComponent(id)}&auto=1&height=66`;
+ $('#trackTitle').textContent=t.title||'未知歌曲';$('#trackArtist').textContent=t.author||'';
+ const cover=$('#playerCover');cover.replaceChildren();cover.textContent='♫';
+ if(t.cover){const img=document.createElement('img');img.src=t.cover;img.alt='';img.addEventListener('error',()=>{img.remove();cover.textContent='♫'},{once:true});cover.replaceChildren(img)}
+ syncPlayer();$('#now').classList.add('show');$('#now').scrollIntoView({behavior:'smooth',block:'nearest'});
+ audio.play().catch(()=>msg('播放失败：网易云可能没有提供这首歌的公开音源。',true));
 }
-officialPlayer.addEventListener('load',()=>$('#playerLoading').hidden=true);
 $('#stop').onclick=stop;
+$('#playerToggle').onclick=()=>{if(audio.paused){if(audio.src)audio.play().catch(()=>msg('播放失败：网易云可能没有提供这首歌的公开音源。',true))}else audio.pause()};
+$('#playerProgress').addEventListener('input',e=>{if(Number.isFinite(audio.duration)&&audio.duration>0){audio.currentTime=Number(e.target.value)/1000*audio.duration;syncPlayer()}});
+for(const event of ['loadedmetadata','durationchange','timeupdate','play','pause','ended'])audio.addEventListener(event,syncPlayer);
+audio.addEventListener('error',()=>{if(audio.currentSrc)msg('播放失败：网易云可能没有提供这首歌的公开音源。',true)});
 
 function saveClassic(){localStorage.setItem(SAVE_CLASSIC,JSON.stringify(C))}
 function saveSwiss(){localStorage.setItem(SAVE_SWISS,JSON.stringify(S))}
