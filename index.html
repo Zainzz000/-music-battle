@@ -86,7 +86,9 @@ h1 em,.brand{color:var(--r)}h1 .tag{background:#fff;color:var(--r);border:1px so
 .player-mark{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#e54845;color:white;font-size:25px}
 .player-head strong{display:block;font-size:14px;font-weight:750;color:#303033}
 .player-head small{display:block;margin-top:3px;color:#898a8f;font-size:12px}
-.player-close{margin-left:auto;width:34px;height:34px;border:1px solid #e7e7e9;border-radius:50%;background:#fafafb;color:#777;cursor:pointer;font-size:21px;line-height:1}
+.player-open{margin-left:auto;padding:8px 11px;border:1px solid #f0cecc;border-radius:10px;background:#fff6f5;color:#c83f3c;text-decoration:none;font-size:12px;font-weight:650;white-space:nowrap}
+.player-open:hover{background:#e54845;color:#fff}
+.player-close{width:34px;height:34px;border:1px solid #e7e7e9;border-radius:50%;background:#fafafb;color:#777;cursor:pointer;font-size:21px;line-height:1}
 .player-loading{width:min(100%,460px);padding:14px 16px;border-radius:12px;background:#f7f7f8;color:#898a8f;font-size:13px}
 .player-loading[hidden]{display:none}
 #officialPlayer{display:block;width:min(100%,460px);height:86px;border:0;border-radius:12px;background:#eee}
@@ -121,7 +123,7 @@ h1 em,.brand{color:var(--r)}h1 .tag{background:#fff;color:var(--r);border:1px so
 <div class="tools searchbar"><input id="artist" type="search" placeholder="输入歌手名称，如 周杰伦" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"><button id="clearArtist" class="clear-artist" type="button" aria-label="清空歌手名称" title="清空">×</button><button id="search" class="btn red">搜索并开始 <span aria-hidden="true">↗</span></button></div><div class="actions"><button id="exportPng" class="btn">↓ 导出完整赛程 PNG</button><button id="exportSvg" class="btn">SVG</button><button id="exportTier" class="btn red">↓ 导出夯到拉排行榜</button><button id="restart" class="btn">↻ 重新开始</button><button id="clear" class="btn">清除存档</button><button id="toggleManual" class="btn">导入歌单 <span id="chevron">⌄</span></button></div>
 <div id="manualPanel" class="manualpanel" hidden><textarea id="manual" rows="4" placeholder="每行一首，共64首。例如：晴天 - 周杰伦"></textarea><button id="import" class="btn red">使用歌单开始</button></div><p id="status" class="muted" role="status" aria-live="polite"></p>
 <section id="now" class="now" aria-label="网易云音乐播放器">
-  <div class="player-head"><span class="player-mark">♫</span><div><strong>网易云播放器</strong><small>如未自动播放，请点播放器按钮；可拖动进度条</small></div><button id="stop" class="player-close" type="button" aria-label="关闭播放器">×</button></div>
+  <div class="player-head"><span class="player-mark">♫</span><div><strong>网易云播放器</strong><small>若显示 -00:00，请在网易云歌曲页播放</small></div><a id="openNetEase" class="player-open" target="_blank" rel="noopener">在网易云打开 ↗</a><button id="stop" class="player-close" type="button" aria-label="关闭播放器">×</button></div>
   <div id="playerLoading" class="player-loading" role="status">正在连接网易云播放器…</div>
   <iframe id="officialPlayer" title="网易云音乐播放器" allow="autoplay; encrypted-media"></iframe>
 </section>
@@ -213,6 +215,7 @@ function stop(){officialPlayer.removeAttribute('src');$('#now').classList.remove
 function play(t){
  const id=String(t.id||'');
  if(!/^\d+$/.test(id)){if(t.link)window.open(t.link,'_blank','noopener');else msg('这首歌没有网易云曲目链接。',true);return}
+ $('#openNetEase').href=`https://music.163.com/#/song?id=${encodeURIComponent(id)}`;
  $('#playerLoading').hidden=false;$('#now').classList.add('show');$('#now').scrollIntoView({behavior:'smooth',block:'nearest'});
  officialPlayer.src=`https://music.163.com/outchain/player?type=2&id=${encodeURIComponent(id)}&auto=1&height=66`;
 }
