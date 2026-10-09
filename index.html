@@ -288,10 +288,10 @@ const posterShort=(s,n=16)=>{s=String(s||'—');return [...s].length>n?[...s].sl
 const posterFit=(s,size=22,max=160)=>{s=String(s||'—');let out='',width=0;for(const c of s){const w=size*(/[\u2e80-\u9fff\uf900-\ufaff]/u.test(c)?1:.56);if(width+w>max-size)break;out+=c;width+=w}return out.length<[...s].length?out+'…':out};
 function posterSVG(){
  if(C.songs.length!==64)throw Error('请先生成64首歌曲');
- const W=2700,H=3400,top=350,step=178,boxH=120,colW=188,gap=22,sideWidth=5*colW+4*gap,centerX=(W-260)/2;
+ const W=2700,H=3400,top=350,step=178,boxH=120,colW=210,gap=18,sideWidth=5*colW+4*gap,centerX=(W-260)/2;
  const leftX=42,rightX=W-42-sideWidth,labels=['64 强','32 强','16 强','8 强','4 强'];
  let out=[`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
- `<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#111722"/><stop offset="1" stop-color="#090c13"/></linearGradient><linearGradient id="champ" x2="1"><stop stop-color="#592641"/><stop offset="1" stop-color="#30223d"/></linearGradient></defs>`,
+ `<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#111722"/><stop offset="1" stop-color="#090c13"/></linearGradient><linearGradient id="champ" x2="1"><stop stop-color="#592641"/><stop offset="1" stop-color="#30223d"/></linearGradient><filter id="routeGlow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`,
  `<rect width="${W}" height="${H}" fill="url(#bg)"/><path d="M42 72 H${W-42}" stroke="#343d4b" stroke-width="2"/>`,
  `<text x="60" y="145" font-size="58" font-weight="800" fill="#f4f5f7" font-family="Hiragino Sans GB,PingFang SC,Microsoft YaHei,sans-serif">MUSIC BATTLE</text>`,
  `<text x="60" y="205" font-size="30" fill="#aeb8c7" font-family="Hiragino Sans GB,PingFang SC,Microsoft YaHei,sans-serif">${posterEscape(C.artist||'64首歌曲')} · 64 首歌曲淘汰赛</text>`,
@@ -303,7 +303,7 @@ function posterSVG(){
  const colX=(side,r)=>side==='left'?leftX+r*(colW+gap):rightX+(4-r)*(colW+gap);
  for(const side of ['left','right'])for(let r=0;r<4;r++)for(let i=0;i<(8>>r);i++){
   const direction=side==='left'?1:-1,x=colX(side,r),nx=colX(side,r+1),y1=cy(r,2*i),y2=cy(r,2*i+1),ym=cy(r+1,i),edge=x+(direction===1?colW:0),next=nx+(direction===1?0:colW),mid=(edge+next)/2;
-  out.push(`<path d="M${edge} ${y1} H${mid} V${ym} H${next} M${edge} ${y2} H${mid}" fill="none" stroke="#56677d" stroke-width="3" opacity=".8"/>`);
+  out.push(`<path d="M${edge} ${y1} H${mid} V${ym} H${next} M${edge} ${y2} H${mid} V${ym}" fill="none" stroke="#56677d" stroke-width="3" opacity=".8"/>`);
  }
  for(const side of ['left','right'])for(let r=0;r<5;r++){
   const x=colX(side,r);out.push(txt(x+colW/2,306,labels[r],'#d8b8c7',24,750,'middle'));
@@ -311,15 +311,16 @@ function posterSVG(){
   for(let i=0;i<count;i++){
    const idx=offset+i,center=cy(r,i),y=center-boxH/2,winner=C.winners[r]?.[idx],arr=classicEntrants(r),a=r===0?arr[2*idx]:arr[2*idx],b=r===0?arr[2*idx+1]:arr[2*idx+1];
    out.push(box(x,y,colW,boxH,'#171e29',winner?'#bd6a8a':'#344052'));
-   out.push(txt(x+14,center-8,posterFit(a?.title||'等待晋级',22,colW-28),winner?.id===a?.id?'#ffc2d4':'#f0f2f6',22,winner?.id===a?.id?750:500));
-   out.push(`<path d="M${x+14} ${center+2} H${x+colW-14}" stroke="#343d4b"/>`);
-   out.push(txt(x+14,center+32,posterFit(b?.title||'等待晋级',22,colW-28),winner?.id===b?.id?'#ffc2d4':'#aab5c4',22,winner?.id===b?.id?750:500));
+   out.push(txt(x+14,center-17,posterFit(a?.title||'等待晋级',26,colW-28),winner?.id===a?.id?'#ffc2d4':'#f0f2f6',26,winner?.id===a?.id?750:500));
+   out.push(`<path d="M${x+14} ${center} H${x+colW-14}" stroke="#343d4b"/>`);
+   out.push(txt(x+14,center+43,posterFit(b?.title||'等待晋级',26,colW-28),winner?.id===b?.id?'#ffc2d4':'#aab5c4',26,winner?.id===b?.id?750:500));
   }
  }
- const finalY=cy(4,0),fx=centerX,fw=260;out.push(`<path d="M${colX('left',4)+colW} ${finalY} H${fx} M${colX('right',4)} ${finalY} H${fx+fw}" stroke="#b16b8a" stroke-width="4" fill="none"/>`);
+ const finalY=cy(4,0),fx=centerX,fw=260,routeTop=finalY-17,routeBottom=finalY+43,leftEdge=colX('left',4)+colW,rightEdge=colX('right',4),leftJoin=(leftEdge+fx)/2,rightJoin=(rightEdge+fx+fw)/2;
+ out.push(`<path d="M${leftEdge} ${routeTop} H${leftJoin} V${finalY} H${fx} M${leftEdge} ${routeBottom} H${leftJoin} V${finalY} M${rightEdge} ${routeTop} H${rightJoin} V${finalY} H${fx+fw} M${rightEdge} ${routeBottom} H${rightJoin} V${finalY}" stroke="#ff63ac" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#routeGlow)"/>`);
  out.push(txt(fx+fw/2,306,'决赛','#d8b8c7',24,750,'middle'));out.push(box(fx,finalY-72,fw,144,'#24202d','#b66d8d',16));
- const finalists=C.winners[4]||[];out.push(txt(fx+fw/2,finalY-12,posterShort(finalists[0]?.title||'待晋级',17),'#f2d8e4',24,700,'middle'));out.push(txt(fx+fw/2,finalY+32,posterShort(finalists[1]?.title||'待晋级',17),'#c2b5c2',24,600,'middle'));
- const champ=C.winners[5]?.[0],champY=finalY+360;out.push(`<path d="M${fx+fw/2} ${finalY+72} V${champY-70}" stroke="#d17a9a" stroke-width="5" fill="none"/>`);
+ const finalists=C.winners[4]||[];out.push(txt(fx+fw/2,finalY-15,posterFit(finalists[0]?.title||'待晋级',28,fw-32),'#f2d8e4',28,700,'middle'));out.push(txt(fx+fw/2,finalY+43,posterFit(finalists[1]?.title||'待晋级',28,fw-32),'#c2b5c2',28,600,'middle'));
+ const champ=C.winners[5]?.[0],champY=finalY+360;out.push(`<path d="M${fx+fw/2} ${finalY+72} V${champY-70}" stroke="#ff63ac" stroke-width="7" fill="none"/>`);
  out.push(txt(fx+fw/2,champY-92,'冠军','#e8c79e',25,750,'middle'));out.push(box(fx,champY-70,fw,140,'url(#champ)','#d17a9a',18));
  out.push(txt(fx+fw/2,champY+10,posterFit(champ?.title||'等待冠军',26,fw-28),'#fff1d7',26,800,'middle'));
  out.push(txt(42,H-46,'64 首歌曲 · 6 轮比赛 · 1 位冠军','#8f9aaa',22));
